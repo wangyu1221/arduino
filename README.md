@@ -1,5 +1,6 @@
 # simple-cyclocomputer
-8266|oled|
+8266|oled
+:-|:-
 G|GND
 3V|VCC
 D5|D0 
