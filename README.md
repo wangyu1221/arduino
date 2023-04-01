@@ -1,4 +1,4 @@
-# simple-cyclocomputer
+# 一个简单的自行车码表
 8266|oled
 :-|:-
 G|GND
