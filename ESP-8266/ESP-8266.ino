@@ -77,6 +77,7 @@ void setup() {
   WiFi.forceSleepBegin();
 }
 
+// 模拟骑行
 long a = 0;
 long b = 0;
 
@@ -84,6 +85,7 @@ void loop(void) {
   // picture loop
   currentTime = millis();
   draw();
+  // 模拟骑行
   if (currentTime - a > b) {
     blink();
     a = currentTime;
