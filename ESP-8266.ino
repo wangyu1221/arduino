@@ -1,11 +1,5 @@
 #include <U8g2lib.h>
-
-// *rotation, clock, data, cs, dc, reset
-// 老8266 + 老屏幕
-// U8G2_UC1701_MINI12864_F_4W_SW_SPI u8g(U8G2_R0, 16, 15, 13, 14, 12);
-// 新8266 + OLED
-// U8G2_SSD1306_128X64_NONAME_2_4W_HW_SPI u8g(U8G2_R0, 4, 5, 3);
-U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI u8g(U8G2_R0, 4, 5, 3);
+#include <ESP8266WiFi.h>
 
 static const uint8_t PROGMEM su[] = {
   /*--  文字:  速  --*/
@@ -51,6 +45,13 @@ static const uint8_t PROGMEM shi[] = {
   0x22, 0x11, 0x22, 0x12, 0x22, 0x12, 0x22, 0x10, 0x3E, 0x10, 0x22, 0x10, 0x00, 0x14, 0x00, 0x08
 };
 
+// *rotation, clock, data, cs, dc, reset
+// 老8266 + 老屏幕
+// U8G2_UC1701_MINI12864_F_4W_SW_SPI u8g(U8G2_R0, 16, 15, 13, 14, 12);
+// 新8266 + OLED
+// U8G2_SSD1306_128X64_NONAME_2_4W_HW_SPI u8g(U8G2_R0, 4, 5, 3);
+U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI u8g(U8G2_R0, 4, 5, 3);
+
 int cycleDistance = 2065;    // 轮子一圈长度，毫米
 const int interruptPin = 2;  // 按键位置
 int buttonState = 0;
@@ -72,6 +73,8 @@ void setup() {
   u8g.setFont(u8g2_font_ncenB24_tr);
   pinMode(2, OUTPUT);
   Serial.println("setup finish");
+  WiFi.mode(WIFI_OFF);
+  WiFi.forceSleepBegin();
 }
 
 long a = 0;
@@ -85,6 +88,11 @@ void loop(void) {
     blink();
     a = currentTime;
     b = random(400, 600);
+  }
+  if(currentTime > 10000){
+    u8g.clearBuffer();
+    u8g.sendBuffer();
+    ESP.deepSleep(0);
   }
 }
 
