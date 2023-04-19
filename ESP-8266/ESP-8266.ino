@@ -52,50 +52,46 @@ static const uint8_t PROGMEM shi[] = {
 // U8G2_SSD1306_128X64_NONAME_2_4W_HW_SPI u8g(U8G2_R0, 4, 5, 3);
 U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI u8g(U8G2_R0, 4, 5, 3);
 
-int cycleDistance = 2065;    // 轮子一圈长度，毫米
-const int interruptPin = 2;  // 按键位置
-int buttonState = 0;
-unsigned long totalDistance = 0;  // 总里程，毫米
-// 使用长整型变量
-unsigned long lastDebounceTime = 0;  // 上次按键触发时间
-unsigned long debounceDelay = 200;   // 去抖时间，根据实际情况调整
+const int cycleDistance = 2065;  // 轮子一圈长度，毫米
+const int interruptPin = 15;     // 按键位置
 
-byte timestampIndex = 0;
-unsigned long timestamp[] = { 0, 0, 0, 0, 0 };
-unsigned long currentTime = 0;
+
+unsigned long lastLoopTime = 0;
+unsigned long lastInterruptTime = 0;  // 上次按键触发时间
+unsigned long totalDistance = 0;      // 总里程，毫米
 char speedValue[10] = "0.0";
 
 void setup() {
-  // put your setup code here, to run once:
   Serial.begin(9600);
   Serial.println("setup...");
   u8g.begin();
   u8g.setFont(u8g2_font_ncenB24_tr);
-  pinMode(2, OUTPUT);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), interrupt, RISING);
   Serial.println("setup finish");
   WiFi.mode(WIFI_OFF);
   WiFi.forceSleepBegin();
 }
 
-// 模拟骑行
-long a = 0;
-long b = 0;
-
 void loop(void) {
-  // picture loop
-  currentTime = millis();
+  lastLoopTime = millis();
+  if (lastLoopTime - lastInterruptTime > 5000) {
+    dtostrf(0, 3, 1, speedValue);
+  }
+  if (lastLoopTime - lastInterruptTime > 60000) {
+    sleep();
+  }
+  second();
+  delay(1000 - (lastLoopTime % 1000));
+}
+
+void second(void) {
   draw();
-  // 模拟骑行
-  if (currentTime - a > b) {
-    blink();
-    a = currentTime;
-    b = random(400, 600);
-  }
-  if(currentTime > 10000){
-    u8g.clearBuffer();
-    u8g.sendBuffer();
-    ESP.deepSleep(0);
-  }
+}
+
+void sleep(void) {
+  u8g.clearBuffer();
+  u8g.sendBuffer();
+  ESP.deepSleep(0);
 }
 
 void draw(void) {
@@ -124,32 +120,35 @@ void draw(void) {
   u8g.drawXBMP(0, 32, 16, 16, qi);
   u8g.drawXBMP(16, 32, 16, 16, shi);
   // // 骑时
-  long a1 = currentTime / 1000;
+  long a1 = lastLoopTime / 1000;
   int second = a1 % 3600 % 60;
   int minute = a1 % 3600 / 60;
   int hour = a1 / 3600;
   char buffer[40];
   sprintf(buffer, "%02d:%02d:%02d", hour, minute, second);
   u8g.drawStr(34, 46, buffer);
-  u8g.sendBuffer();  // transfer internal memory to the display
+  u8g.sendBuffer();
 }
 
-void blink() {
-  digitalWrite(2, LOW);
-  int readingStatus = digitalRead(interruptPin);
-  if (currentTime - lastDebounceTime > debounceDelay) {
+const unsigned long debounceDelay = 200;
+byte timestampIndex = 0;
+unsigned long timeArray[] = { 0, 0, 0, 0, 0 };
+// 使用长整型变量
+unsigned long lastDebounceTime = 0;  // 上次按键触发时间
+
+IRAM_ATTR void interrupt() {
+  lastInterruptTime = millis();
+  if (lastInterruptTime - lastDebounceTime > debounceDelay) {
     totalDistance = totalDistance + cycleDistance;
-    lastDebounceTime = currentTime;
-    timestamp[timestampIndex % 5] = currentTime;
+    lastDebounceTime = lastInterruptTime;
+    timeArray[timestampIndex % 5] = lastInterruptTime;
     // mm / ms
-    long right = timestamp[(timestampIndex + 1) % 5];
-    if (right > 0) {
-      double speed = ((double)cycleDistance * 4) / (currentTime - right);
+    long lastTimeInArray = timeArray[(timestampIndex + 1) % 5];
+    if (lastTimeInArray > 0) {
+      double speed = ((double)cycleDistance * 4) / (lastInterruptTime - lastTimeInArray);
       dtostrf((speed * 36 / 10), 3, 1, speedValue);
     }
     timestampIndex++;
   }
   Serial.println(speedValue);
-  delay(50);
-  digitalWrite(2, HIGH);
 }
