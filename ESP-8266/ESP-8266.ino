@@ -54,6 +54,7 @@ U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI u8g(U8G2_R0, 4, 5, 3);
 
 const int cycleDistance = 2065;  // 轮子一圈长度，毫米
 const int interruptPin = 15;     // 按键位置
+const int oledVccPin = 12;
 
 
 unsigned long lastLoopTime = 0;
@@ -70,12 +71,17 @@ void setup() {
   Serial.println("setup finish");
   WiFi.mode(WIFI_OFF);
   WiFi.forceSleepBegin();
+  pinMode(oledVccPin, OUTPUT);
+  digitalWrite(oledVccPin, HIGH);  
 }
 
 void loop(void) {
   lastLoopTime = millis();
   if (lastLoopTime - lastInterruptTime > 5000) {
     dtostrf(0, 3, 1, speedValue);
+  }
+  if (lastLoopTime - lastInterruptTime > 30000) {
+    digitalWrite(oledVccPin, LOW);
   }
   if (lastLoopTime - lastInterruptTime > 60000) {
     sleep();
@@ -91,6 +97,7 @@ void second(void) {
 void sleep(void) {
   u8g.clearBuffer();
   u8g.sendBuffer();
+  digitalWrite(oledVccPin, LOW);
   ESP.deepSleep(0);
 }
 
@@ -137,6 +144,7 @@ unsigned long timeArray[] = { 0, 0, 0, 0, 0 };
 unsigned long lastDebounceTime = 0;  // 上次按键触发时间
 
 IRAM_ATTR void interrupt() {
+  digitalWrite(oledVccPin, HIGH);
   lastInterruptTime = millis();
   if (lastInterruptTime - lastDebounceTime > debounceDelay) {
     totalDistance = totalDistance + cycleDistance;
